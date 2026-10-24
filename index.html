@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#2f7d62">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>InShape</title>
+<style>
+:root{--bg:#f2f5f3;--card:#fff;--text:#1d2b25;--mute:#6b7c74;--accent:#2f7d62;--bad:#d64535;--good:#1e8e3e;--line:#e1e8e4}
+@media (prefers-color-scheme:dark){:root{--bg:#111a16;--card:#1b2823;--text:#eaf2ee;--mute:#9ab0a6;--accent:#4fb08c;--bad:#ff7b6b;--good:#5fd38a;--line:#2a3a33}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--text);overscroll-behavior:none;user-select:none;-webkit-user-select:none}
+#home{height:100dvh;overflow-y:auto;padding:0 16px calc(24px + env(safe-area-inset-bottom))}
+header{margin:0 -16px;padding:calc(24px + env(safe-area-inset-top)) 22px 34px;background:linear-gradient(135deg,var(--accent),#1f5c47);color:#fff;border-radius:0 0 28px 28px}
+header h1{margin:0;font-size:2rem}header p{margin:4px 0 0;opacity:.9}
+.card{background:var(--card);border-radius:20px;padding:16px;box-shadow:0 2px 10px rgba(0,0,0,.07)}
+.hero{margin-top:-20px;position:relative;max-width:900px;margin-inline:auto}
+.chips{display:flex;gap:8px;margin:10px 0 14px}
+.chip{flex:1;text-align:center;padding:10px 6px;border-radius:14px;border:2px solid var(--line);font-weight:600;cursor:pointer}
+.chip.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 15%,transparent)}
+.big{width:100%;padding:16px;border:0;border-radius:16px;background:var(--accent);color:#fff;font-size:1.1rem;font-weight:700}
+.big:active{transform:scale(.98)}
+#status{margin:10px 0 0;color:var(--mute);min-height:1.2em}
+h2{margin:22px 4px 10px;font-size:1.1rem;max-width:900px;margin-inline:auto}
+#list{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));max-width:900px;margin:0 auto}
+.pc{display:flex;gap:12px;align-items:center;cursor:pointer}
+.pc:active{transform:scale(.98)}
+.pc b{display:block;margin-bottom:3px}.pc small{color:var(--mute)}
+.tag{font-size:.7rem;padding:2px 8px;border-radius:99px;background:var(--line);color:var(--mute);margin-left:6px;font-weight:600}
+.go{margin-left:auto;width:36px;height:36px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;flex:none}
+small.note{display:block;text-align:center;color:var(--mute);margin:18px 0}
+#live{position:fixed;inset:0;background:#000;display:flex;flex-direction:column}
+#stage{position:relative;flex:1;min-height:0}
+video,canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;transform:scaleX(-1)}
+#top{position:absolute;top:0;left:0;right:0;z-index:2;padding:calc(10px + env(safe-area-inset-top)) 14px 26px;color:#fff;background:linear-gradient(#000b,transparent);display:flex;align-items:center;gap:10px}
+#top b{flex:1;font-size:1.1rem}
+#top button{background:#ffffff35;color:#fff;border:0;border-radius:50%;width:38px;height:38px;font-size:1.1rem}
+#sheet{background:var(--card);border-radius:24px 24px 0 0;padding:16px 18px calc(16px + env(safe-area-inset-bottom));text-align:center}
+#how{color:var(--mute);font-size:.9rem}
+#msg{font-size:1.25rem;font-weight:700;min-height:1.5em;margin-top:4px}
+#msg.bad{color:var(--bad)}#msg.good{color:var(--good)}
+#bar{height:10px;border-radius:9px;background:var(--line);overflow:hidden;margin:12px 0}
+#fill{height:100%;width:0;background:var(--good);transition:width .15s}
+#sheet button{width:100%;padding:12px;border-radius:14px;border:2px solid var(--accent);background:transparent;color:var(--accent);font-weight:700;font-size:1rem}
+#angleInfo{font-size:.7rem;color:var(--mute);margin-top:6px}
+#demo{position:absolute;left:10px;bottom:10px;z-index:2;width:120px;height:180px;border-radius:16px;background:#00000066;overflow:hidden;border:1px solid #ffffff40}
+#demo small{position:absolute;top:6px;left:0;right:0;text-align:center;color:#fff;font-size:.65rem;opacity:.85}
+#demo canvas{position:static;transform:none;width:100%;height:100%;display:block}
+@media (min-width:700px){#demo{width:180px;height:270px}}
+input[type=range]{width:100%;accent-color:var(--accent);margin:2px 0 8px}
+.shuf{display:flex;gap:8px;align-items:center;margin:4px 0 14px;color:var(--mute)}
+</style>
+</head>
+<body>
+<section id="home">
+  <header><h1>InShape</h1><p>Your camera-guided yoga coach</p></header>
+  <div class="card hero">
+    <b>Who is practising?</b>
+    <div class="chips" id="chips">
+      <div class="chip on" data-v="0">Adult</div>
+      <div class="chip" data-v="12">Child</div>
+      <div class="chip" data-v="15">Senior</div>
+    </div>
+    <div style="margin-top:4px"><b>Poses in your session: <span id="playVal">10</span></b></div>
+    <input type="range" id="playN" min="1" max="20" value="10">
+    <label class="shuf"><input type="checkbox" id="shuf"> Shuffle the order</label>
+    <button class="big" id="startAll">Start session</button>
+    <p id="status"></p>
+  </div>
+  <h2>Pose library</h2>
+  <div id="list"></div>
+  <small class="note">Stand about 2 metres from the camera with your whole body in view. Your video stays on your device. InShape is a guide, not a replacement for an instructor. Stop if anything hurts.</small>
+</section>
+
+<section id="live" hidden>
+  <div id="stage"><video id="cam" autoplay playsinline muted></video><canvas id="overlay"></canvas>
+    <div id="demo"><small>Aim for this</small><canvas id="demo3d"></canvas></div>
+    <div id="top"><b id="pname"></b><span id="count"></span><button id="close" aria-label="End session">✕</button></div>
+  </div>
+  <div id="sheet">
+    <div id="how"></div>
+    <div id="msg"></div>
+    <div id="bar"><div id="fill"></div></div>
+    <button id="skip">Skip pose</button>
+    <div id="angleInfo"></div>
+  </div>
+</section>
+
+<script type="module">
+let PoseLandmarker, FilesetResolver, DrawingUtils;
+const LIB = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@";
+const MODEL = "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
+
+// Downloads the model first (clear error if blocked), then tries two library versions on the CPU.
+async function loadModel() {
+  const gl = document.createElement("canvas").getContext("webgl2") || document.createElement("canvas").getContext("webgl");
+  if (!gl) throw new Error("WebGL is not available in this browser, and the pose library needs it. Turn on hardware acceleration (Settings > System), turn off privacy or anti-fingerprinting extensions, or try Microsoft Edge.");
+  let buf;
+  try {
+    const r = await fetch(MODEL);
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    buf = new Uint8Array(await r.arrayBuffer());
+  } catch (e) {
+    throw new Error("The model file could not be downloaded (" + (e.message || e) + "). Check your internet, or turn off ad-blockers and browser shields for this page.");
+  }
+  const errs = [];
+  for (const v of ["0.10.14", "0.10.21"]) {
+    try {
+      const m = await import(LIB + v);
+      PoseLandmarker = m.PoseLandmarker; FilesetResolver = m.FilesetResolver; DrawingUtils = m.DrawingUtils;
+      const fs = await FilesetResolver.forVisionTasks(LIB + v + "/wasm");
+      return await PoseLandmarker.createFromOptions(fs, {
+        baseOptions: { modelAssetBuffer: buf, delegate: "CPU" }, runningMode: "VIDEO", numPoses: 1 });
+    } catch (e) { console.error(v, e); errs.push("v" + v + ": " + (e.message || e)); }
+  }
+  throw new Error(errs.join(" | "));
+}
+
+const $ = id => document.getElementById(id);
+const DEBUG = location.search.includes("debug");  // add ?debug to the address to see live angles
+const HOLD = 8, BASE = 15;                         // hold seconds, base leniency in degrees
+
+// ---------- pose library ----------
+// Each rule is key: [min, max] in degrees.
+// kmax/kmin = straighter/more-bent knee, emax/emin = elbows, smax/smin = shoulders
+// (arm down ~10, sideways ~90, overhead ~170). Add a pose by adding one line.
+const P = [
+ ["Mountain","Standing",{kmin:[160,180],emin:[150,180],smax:[0,40]},"Stand tall, feet together, arms relaxed by your sides."],
+ ["Upward Salute","Standing",{kmin:[160,180],emin:[150,180],smin:[140,180]},"Reach both arms straight up beside your ears."],
+ ["Arms Out (T)","Standing",{kmin:[160,180],emin:[150,180],smin:[65,115],smax:[65,115]},"Stand tall and lift both arms to shoulder height."],
+ ["Star","Standing",{kmin:[160,180],emin:[150,180],smin:[110,160],smax:[110,160]},"Feet wide, arms stretched out and up in a V."],
+ ["Tree","Balance",{kmax:[160,180],kmin:[0,120],smin:[140,180]},"Balance on one leg, other foot on your thigh, arms overhead."],
+ ["Tree (Prayer Hands)","Balance",{kmax:[160,180],kmin:[0,120],emin:[20,100],emax:[20,100]},"Same balance, with your hands together at your chest."],
+ ["Chair","Strength",{kmax:[80,125],kmin:[80,125],smin:[140,180]},"Bend your knees as if sitting back, arms overhead."],
+ ["Warrior I","Strength",{kmax:[160,180],kmin:[70,115],smin:[140,180]},"Step one foot back, bend the front knee, arms overhead."],
+ ["Warrior II","Strength",{kmax:[160,180],kmin:[60,90],smin:[65,115],smax:[65,115],emin:[150,180]},"Wide stance, front knee bent about 75°, arms out to the sides."],
+ ["Goddess","Strength",{kmax:[90,130],kmin:[90,130],smin:[65,115],smax:[65,115],emin:[60,115],emax:[60,115]},"Wide stance, knees bent, elbows bent with arms up like a cactus."],
+ ["Garland (Squat)","Strength",{kmax:[30,95],kmin:[30,95]},"Squat low with your feet wide and your back straight."],
+ ["Cactus Arms","Standing",{kmin:[160,180],smin:[65,115],smax:[65,115],emin:[60,115],emax:[60,115]},"Stand tall, upper arms out to the sides, elbows bent and hands up."],
+ ["Prayer Pose","Standing",{kmin:[160,180],emin:[20,100],emax:[20,100],smax:[0,60]},"Stand tall with your palms together at your chest."],
+ ["Tree (Arms Out)","Balance",{kmax:[160,180],kmin:[0,120],smin:[65,115],smax:[65,115]},"Balance on one leg, other foot on your thigh, arms out to the sides."],
+ ["Chair (Prayer Hands)","Strength",{kmax:[80,125],kmin:[80,125],emin:[20,100],emax:[20,100]},"Sit back into a chair shape with your palms together at your chest."],
+ ["Goddess (Prayer Hands)","Strength",{kmax:[90,130],kmin:[90,130],emin:[20,100],emax:[20,100]},"Wide stance, knees bent out, palms together at your chest."],
+ ["Side Lunge","Strength",{kmax:[160,180],kmin:[60,110],emin:[20,100],emax:[20,100]},"Wide stance, bend one knee and shift sideways, other leg straight, hands at chest."],
+ ["Crescent Side Bend","Standing",{kmin:[160,180],smin:[140,180],emin:[150,180],tilt:[15,45]},"Reach both arms overhead and lean gently to one side."],
+ ["Standing Side Stretch","Standing",{kmin:[160,180],smax:[140,180],smin:[0,50],tilt:[8,35]},"One arm reaches overhead as you lean away, the other arm rests down."],
+ ["Triangle","Strength",{kmin:[160,180],emin:[150,180],smax:[140,180],smin:[0,45],tilt:[20,70],wide:[1.6,9],hand:[0.3,9]},"Wide straight legs, lean sideways, one arm straight up and the other down without touching your leg."],
+];
+
+const MSG = {
+  kmax:["Straighten your standing leg","Bend your knees more"],
+  kmin:["Straighten that leg a little","Bend that knee more"],
+  e:["Straighten your arms","Bend your elbows more"],
+  s:["Raise your arms higher","Lower your arms a little"],
+  t:["Lean a little more to the side","Lean a little less to the side"],
+  w:["Step your feet wider apart","Bring your feet a little closer"],
+  h:["Keep your hand off your leg","Keep your hand off your leg"],
+};
+
+// ---------- maths ----------
+function angle(a, b, c) {
+  const r = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+  const d = Math.abs(r * 180 / Math.PI);
+  return d > 180 ? 360 - d : d;
+}
+function metrics(p, w, h) {
+  const q = i => ({ x: p[i].x * w, y: p[i].y * h });
+  const A = (a, b, c) => angle(q(a), q(b), q(c));
+  const k = [A(23,25,27), A(24,26,28)], e = [A(11,13,15), A(12,14,16)], s = [A(23,11,13), A(24,12,14)];
+  const P2 = i => ({ x: p[i].x * w, y: p[i].y * h });
+  const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  const mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+  const segD = (pt, a, b) => {
+    const vx = b.x - a.x, vy = b.y - a.y, l2 = vx * vx + vy * vy || 1;
+    const u = Math.max(0, Math.min(1, ((pt.x - a.x) * vx + (pt.y - a.y) * vy) / l2));
+    return Math.hypot(pt.x - (a.x + u * vx), pt.y - (a.y + u * vy));
+  };
+  const torso = dist(mid(P2(11), P2(12)), mid(P2(23), P2(24))) || 1;
+  const wide = dist(P2(27), P2(28)) / (dist(P2(11), P2(12)) || 1);   // feet apart / shoulder width
+  const hand = Math.min(...[15, 16].flatMap(wi => [[23,25],[25,27],[24,26],[26,28]].map(([a, b]) => segD(P2(wi), P2(a), P2(b))))) / torso;  // wrist to legs / torso length
+  const tilt = Math.abs(Math.atan2((p[11].x + p[12].x - p[23].x - p[24].x) * w, (p[23].y + p[24].y - p[11].y - p[12].y) * h)) * 180 / Math.PI;
+  return { kmax:Math.max(...k), kmin:Math.min(...k), emax:Math.max(...e), emin:Math.min(...e),
+           smax:Math.max(...s), smin:Math.min(...s), tilt, wide, hand };
+}
+function check(rules, m, L) {
+  for (const [key, [lo, hi]] of Object.entries(rules)) {
+    const v = m[key], t = MSG[key[0] === "k" ? key : key[0]];
+    const l = (key === "wide" || key === "hand") ? 0 : L;   // leniency only applies to angles
+    if (v < lo - l) return t[0];
+    if (v > hi + l) return t[1];
+  }
+  return null;
+}
+const KEY = [11,12,23,24,25,26,27,28];
+
+// ---------- 3D demo ----------
+// Same order as P. [arm upper angle, arm forearm angle (from straight down; negative = inward),
+// leg1 [thigh sideways, thigh forward, shin sideways, shin forward], leg2 [...]]
+const N=[3,0,3,0];
+const D=[
+ [8,8,N,N],[170,172,N,N],[90,90,N,N],[135,135,[20,0,20,0],[20,0,20,0]],
+ [172,175,[2,0,2,0],[50,15,-100,0]],[16,-92,[2,0,2,0],[50,15,-100,0]],
+ [172,175,[3,70,3,5],[3,70,3,5]],[172,175,[8,65,8,0],[8,-45,8,-45]],
+ [90,90,[85,0,2,0],[57,0,57,0]],[90,175,[55,0,5,0],[55,0,5,0]],
+ [16,-92,[30,80,15,-20],[30,80,15,-20]],
+ [90,175,N,N],[16,-92,N,N],[90,90,[2,0,2,0],[50,15,-100,0]],
+ [16,-92,[3,70,3,5],[3,70,3,5]],[16,-92,[55,0,5,0],[55,0,5,0]],[16,-92,[80,0,0,0],[54,0,54,0]],
+ [172,175,N,N,null,25],[175,175,N,N,[5,5],-20],[5,5,[30,0,30,0],[30,0,30,0],[175,175],45],
+];
+const R=Math.PI/180;
+const JN="hL hR kL kR aL aR sL sR eL eR wL wR pel neck head".split(" ");
+const BN=[["hL","kL",9],["kL","aL",8],["hR","kR",9],["kR","aR",8],["sL","eL",7],["eL","wL",6],["sR","eR",7],["eR","wR",6],["pel","neck",14],["hL","hR",9],["sL","sR",8]];
+let c3,x3,cur={},tg={},seen=false;
+const add=(a,b,k=1)=>[a[0]+b[0]*k,a[1]+b[1]*k,a[2]+b[2]*k];
+function init3d(){
+  c3=$("demo3d"); const r=devicePixelRatio||1;
+  c3.width=c3.clientWidth*r; c3.height=c3.clientHeight*r; x3=c3.getContext("2d");
+}
+function set3d(i){
+  const [au0,af0,l1,l2,a2,lean=0]=D[i], th=lean*R, sn=Math.sin(th), cs=Math.cos(th);
+  const d=(s,c,f=0)=>[s*Math.sin(c*R),-Math.cos(c*R)*Math.cos(f*R),Math.cos(c*R)*Math.sin(f*R)];
+  const lg=[[1,l1],[-1,l2]].map(([s,l])=>{const k=d(s,l[0],l[1]).map(v=>v*.42);return{s,k,a:add(k,d(s,l[2],l[3]),.42)}});
+  const hy=-Math.min(lg[0].a[1],lg[1].a[1]);
+  lg.forEach(({s,k,a})=>{
+    const n=s>0?"L":"R",h=[s*.1,hy,0],sh=[.55*sn+s*.2*cs,hy+.55*cs-s*.2*sn,0],au=(s<0&&a2)?a2[0]:au0,af=(s<0&&a2)?a2[1]:af0,e=add(sh,d(s,au),.3);
+    tg["h"+n]=h; tg["k"+n]=add(h,k); tg["a"+n]=add(h,a);
+    tg["s"+n]=sh; tg["e"+n]=e; tg["w"+n]=add(e,d(s,af),.28);
+  });
+  tg.pel=[0,hy,0]; tg.neck=[.58*sn,hy+.58*cs,0]; tg.head=[.72*sn,hy+.72*cs,0];
+  if(!seen){JN.forEach(n=>cur[n]=[...tg[n]]);seen=true}
+}
+function render3d(t){
+  if(!x3||!tg.pel)return;
+  const W=c3.width,H=c3.height,th=Math.sin(t*.6)*.9,cs=Math.cos(th),sn=Math.sin(th),k=H/2.5,p={};
+  JN.forEach(n=>{
+    const a=cur[n],b=tg[n]; for(let i=0;i<3;i++)a[i]+=(b[i]-a[i])*.12;
+    const x=a[0]*cs+a[2]*sn,z=-a[0]*sn+a[2]*cs,s=4.2/(4.2-z);
+    p[n]={x:W/2+x*k*s,y:H*.9-a[1]*k*s,z,s};
+  });
+  x3.clearRect(0,0,W,H); x3.lineCap="round";
+  x3.fillStyle="#ffffff2e"; x3.beginPath(); x3.ellipse(W/2,H*.9,W*.3,H*.03,0,0,7); x3.fill();
+  BN.map(([a,b,w])=>[p[a],p[b],w]).sort((u,v)=>(u[0].z+u[1].z)-(v[0].z+v[1].z)).forEach(([a,b,w])=>{
+    x3.strokeStyle=`hsl(155 45% ${45+(a.z+b.z)/2*20}%)`; x3.lineWidth=w*a.s*H/200;
+    x3.beginPath(); x3.moveTo(a.x,a.y); x3.lineTo(b.x,b.y); x3.stroke();
+  });
+  const h=p.head; x3.fillStyle="#eaf2ee"; x3.beginPath(); x3.arc(h.x,h.y,H*.05*h.s,0,7); x3.fill();
+}
+
+// ---------- state ----------
+const video = $("cam"), canvas = $("overlay"), ctx = canvas.getContext("2d");
+let lmk, stream, running = false, queue = [], idx = 0, done = 0;
+let readyUntil = 0, holdStart = null, lastMsg = "", lastSpoken = 0, announced = -1, lastT = -1, lvl = 0;
+
+function speak(t) {
+  if (!("speechSynthesis" in window) || speechSynthesis.speaking) return;
+  speechSynthesis.speak(new SpeechSynthesisUtterance(t));
+}
+const say = (t, c) => { $("msg").textContent = t; $("msg").className = c || ""; };
+
+// ---------- home screen ----------
+$("list").innerHTML = P.map((p, i) =>
+  `<div class="card pc" data-i="${i}"><div><b>${p[0]}<span class="tag">${p[1]}</span></b><small>${p[3]}</small></div><div class="go">▶</div></div>`).join("");
+$("list").onclick = e => { const c = e.target.closest(".pc"); if (c) begin([P[+c.dataset.i]]); };
+const slider = $("playN");
+slider.max = P.length; slider.value = Math.min(10, P.length);
+const upd = () => { const n = +slider.value; $("playVal").textContent = n; $("startAll").textContent = `Start session (${n} pose${n > 1 ? "s" : ""})`; };
+slider.oninput = upd; upd();
+$("startAll").onclick = () => {
+  const l = [...P];
+  if ($("shuf").checked) for (let i = l.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [l[i], l[j]] = [l[j], l[i]]; }
+  begin(l.slice(0, +slider.value));
+};
+$("chips").onclick = e => {
+  const c = e.target.closest(".chip"); if (!c) return;
+  document.querySelectorAll(".chip").forEach(x => x.classList.remove("on"));
+  c.classList.add("on"); lvl = +c.dataset.v;
+};
+
+// ---------- session ----------
+async function begin(list) {
+  $("status").textContent = "Loading… (needs internet the first time)";
+  try { if (!lmk) lmk = await loadModel(); }
+  catch (e) { console.error(e); $("status").textContent = "Could not load the pose model. " + (e.message || e); return; }
+  try { stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"user" } }); }
+  catch (e) { console.error(e); $("status").textContent = "Camera problem: " + (e.message || e) + " (allow the camera, and open the page with Live Server, localhost or https)"; return; }
+  readyUntil = performance.now() / 1000 + 5; queue = list; idx = 0; done = 0; holdStart = null; announced = -1; lastMsg = "";
+  video.srcObject = stream; await video.play();
+  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+  $("status").textContent = ""; $("home").hidden = true; $("live").hidden = false;
+  init3d(); running = true; requestAnimationFrame(loop);
+}
+function finish() {
+  running = false;
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  $("live").hidden = true; $("home").hidden = false;
+  $("status").textContent = done ? `Nice work! You completed ${done} of ${queue.length} pose${queue.length > 1 ? "s" : ""}.` : "";
+  if (done) speak("Session complete. Great work!");
+}
+function next(ok) {
+  if (ok) done++;
+  holdStart = null; $("fill").style.width = "0"; idx++; readyUntil = performance.now() / 1000 + 4;
+  if (idx >= queue.length) finish();
+}
+$("close").onclick = finish;
+$("skip").onclick = () => next(false);
+
+function loop() {
+  if (!running) return;
+  if (video.currentTime !== lastT) {
+    lastT = video.currentTime;
+    const res = lmk.detectForVideo(video, performance.now());
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const pose = queue[idx];
+    $("pname").textContent = pose[0]; $("count").textContent = `${idx + 1}/${queue.length}`; $("how").textContent = pose[3];
+    if (announced !== idx) { speak("Next pose: " + pose[0]); announced = idx; set3d(P.indexOf(pose)); }
+
+    let msg = "", good = false;
+    if (!res.landmarks.length) msg = "I cannot see you. Step back so your whole body is in view";
+    else {
+      const p = res.landmarks[0], du = new DrawingUtils(ctx);
+      du.drawConnectors(p, PoseLandmarker.POSE_CONNECTIONS, { color:"#4fb08c", lineWidth:4 });
+      du.drawLandmarks(p, { color:"#fff", radius:4 });
+      if (Math.min(...KEY.map(i => p[i].visibility ?? 1)) < 0.5) msg = "Step back so your whole body is visible";
+      else {
+        const m = metrics(p, canvas.width, canvas.height);
+        if (DEBUG) $("angleInfo").textContent = Object.entries(m).map(([k, v]) => k + " " + (v < 10 ? v.toFixed(2) : Math.round(v))).join("  ");
+        const problem = check(pose[2], m, BASE + lvl);
+        if (problem) msg = problem; else { msg = "Perfect! Hold it"; good = true; }
+      }
+    }
+    const now = performance.now() / 1000, ready = now < readyUntil;
+    if (ready) msg = `Get ready for ${pose[0]}… ${Math.ceil(readyUntil - now)}`;
+    say(msg, ready ? "" : good ? "good" : "bad");
+    if (ready) { holdStart = null; $("fill").style.width = "0"; }
+    else if (good) {
+      holdStart = holdStart ?? now;
+      const held = now - holdStart;
+      $("fill").style.width = Math.min(held / HOLD, 1) * 100 + "%";
+      if (held >= HOLD) { speak("Well done"); if (navigator.vibrate) navigator.vibrate(80); next(true); }
+    } else {
+      holdStart = null; $("fill").style.width = "0";
+      if ((msg !== lastMsg || now - lastSpoken > 8) && now - lastSpoken > 4) { speak(msg); lastSpoken = now; }
+    }
+    lastMsg = msg;
+  }
+  render3d(performance.now() / 1000);
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>
