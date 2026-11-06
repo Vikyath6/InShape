@@ -94,6 +94,7 @@ input[type=range]{width:100%;accent-color:var(--accent);margin:2px 0 8px}
     <input type="range" id="playN" min="1" max="20" value="10">
     <label class="shuf"><input type="checkbox" id="shuf"> Shuffle the order</label>
     <button class="big" id="startAll">Start session</button>
+    <button class="big" id="switchCamBtn" onclick="switchCamera()">Flip Camera 🔄</button>
     <p id="status"></p>
   </div>
   <h2>Your journey</h2>
@@ -529,5 +530,16 @@ const offMsg = ok => { $("xOff").textContent = ok ? "Works offline ✓" : "Needs
 fetch("lib/pose_landmarker_lite.task", { method: "HEAD" }).then(r => offMsg(r.ok)).catch(() => offMsg(false));
 if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
+  let currentFacingMode = "user";
+
+function switchCamera() {
+  // Swaps between front camera ("user") and back camera ("environment")
+  currentFacingMode = (currentFacingMode === "user") ? "environment" : "user";
+
+  // Restarts the camera stream if startCamera exists
+  if (typeof startCamera === "function") {
+    startCamera();
+  }
+}
 </body>
 </html>
