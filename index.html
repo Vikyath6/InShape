@@ -451,12 +451,12 @@ function showResults() {
   $("xDone").hidden = false;
 }
 
-async function begin(list, lv = null) {
+async function begin(list, lv = null) {S
   if (!tipsSeen) { pendingStart = [list, lv]; $("xTips").hidden = false; return; }
   $("status").textContent = "Loading… (needs internet the first time)";
   try { if (!lmk) lmk = await loadModel(); }
   catch (e) { console.error(e); $("status").textContent = "Could not load the pose model. " + (e.message || e); return; }
-  try { stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"user" } }); }
+  try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacingMode } }); }
   catch (e) { console.error(e); $("status").textContent = "Camera problem: " + (e.message || e) + " (allow the camera, and open the page with Live Server, localhost or https)"; return; }
   readyUntil = performance.now() / 1000 + 5; queue = list; jmap = lv; results = []; idx = 0; done = 0; holdStart = null; announced = -1; lastMsg = "";
   video.srcObject = stream; await video.play();
@@ -528,18 +528,21 @@ function loop() {
 // ---------- offline support ----------
 const offMsg = ok => { $("xOff").textContent = ok ? "Works offline ✓" : "Needs internet (offline files not added yet)"; };
 fetch("lib/pose_landmarker_lite.task", { method: "HEAD" }).then(r => offMsg(r.ok)).catch(() => offMsg(false));
-if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("sw.js").catch(() => {});
-</script>
-  let currentFacingMode = "user";
 
+if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("sw.js");
+
+let currentFacingMode = "user";
 function switchCamera() {
-  // Swaps between front camera ("user") and back camera ("environment")
+  // 1. Switch between front and back camera
   currentFacingMode = (currentFacingMode === "user") ? "environment" : "user";
 
-  // Restarts the camera stream if startCamera exists
-  if (typeof startCamera === "function") {
-    startCamera();
+  // 2. Stop the current video stream if active
+  if (typeof stream !== "undefined" && stream) {
+    stream.getTracks().forEach(track => track.stop());
+  }
+
+  // 3. Restart your session using begin()
+  if (typeof begin === "function") {
+    begin();
   }
 }
-</body>
-</html>
